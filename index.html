@@ -1,1 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Washington COVID-19 Death Rates</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+        h2, h3 {
+        margin: 10px;
+        font-size: 18px;
+        }
+
+        h3 {
+            font-size: 16px;
+        }
+
+        p {
+            margin: 10px;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-style: solid;
+            border-width: 1px;
+            border-color: rgba(0, 0, 0, 0.2);
+            margin-left: 20px;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+            border-radius: 3px;
+        }
+
+        #features {
+            top: 0;
+            height: 100px;
+            margin-top: 20px;
+            width: 250px;
+        }
+
+        #legend {
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 18px;
+            height: 210px;
+            margin-bottom: 40px;
+            width: 150px;
+        }
+
+        .legend-key {
+            display: inline-block;
+            border-radius: 20%;
+            width: 10px;
+            height: 10px;
+            margin-right: 5px;
+        }
+
+        .mapboxgl-canvas-container.mapboxgl-interactive,
+        .mapboxgl-ctrl-group button.mapboxgl-ctrl-compass {
+            cursor: unset;
+        }
+        
+    </style>
+</head> 
+
+<body>
+    <div id="map"></div>
+    <div class='map-overlay' id='features'>
+        <h2>WA COVID-19 Death Rates</h2>
+        <div id='text-description'>
+            <p>Hover over a county!</p>
+        </div>
+    </div>
+    <div class='map-overlay' id='legend'></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1Ijoia3J4eHN0ZW4iLCJhIjoiY202ZnB2MGExMDg1NTJrb3JnMGhqbWdyNiJ9.tEbH3ITZED6I8GDluBRFQQ';
+
+        const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/light-v10',
+                zoom: 6,
+                center: [-120.5, 47.5]
+            }
+        );
+
+        async function geojsonFetch() { 
+            let response = await fetch('assets/wa-covid-data-102521.geojson');
+            let covidData = await response.json();
+
+            map.on('load', function loadingData() {
+                 map.addSource('covidData', {
+                    type: 'geojson',
+                    data: covidData
+                });
+
+                map.addLayer({
+                    'id': 'covidData-layer',
+                    'type': 'fill',
+                    'source': 'covidData',
+                    'paint': {
+                        'fill-color': [
+                            'step',
+                            ['get', 'deathPer10k'],
+                            '#D8F3DC',  
+                            5,          
+                            '#B7E4C7',  
+                            10,          
+                            '#95D5B2',   
+                            15,          
+                            '#74C69D',   
+                            20,       
+                            '#52B788',  
+                            25,         
+                            '#40916C',  
+                            30, 
+                            '#1B4332'
+                        ],
+                        'fill-outline-color': '#000000',
+                        'fill-opacity': 0.8,
+                    }
+                });
+
+                const layers = [
+                    '0-4',
+                    '5-9',
+                    '10-14',
+                    '15-19',
+                    '20-24',
+                    '25-30',
+                    '31 and more'
+                ];
+                const colors = [
+                    '#D8F3DC80',
+                    '#B7E4C780',
+                    '#95D5B280',
+                    '#74C69D80',
+                    '#52B78880',
+                    '#40916C80',
+                    '#1B433280'
+                ];
+                
+                const legend = document.getElementById('legend');
+                    legend.innerHTML = "<b>Death Rate<br>(per 10k people)</b><br><br>";
+
+                    layers.forEach((layer, i) => {
+                        const color = colors[i];
+                        const item = document.createElement('div');
+                        const key = document.createElement('span');
+                        key.className = 'legend-key';
+                        key.style.backgroundColor = color;
+
+                        const value = document.createElement('span');
+                        value.innerHTML = `${layer}`;
+                        item.appendChild(key);
+                        item.appendChild(value);
+                        legend.appendChild(item);
+                 });
+            });
+
+            map.on('mousemove', ({point}) => {
+                const county = map.queryRenderedFeatures(point, {
+                    layers: ['covidData-layer']
+                });
+                document.getElementById('text-description').innerHTML = county.length ?
+                    `<h3>${county[0].properties.name}</h3><p><strong><em>${county[0].properties.deathPer10k}</strong> deaths per 10k people</em></p>` :
+                    `<p>Hover over a state!</p>`;
+            });
+        }
+
+        geojsonFetch();
+    </script>
+
+</body>
+
+</html>
 
